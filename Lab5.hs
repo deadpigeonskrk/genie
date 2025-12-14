@@ -35,15 +35,17 @@ guess :: String -> QA
 guess gs = P gs
 
 writeQFile :: QA -> IO ()
-writeQFile qa = writeFile "questions.qa" (show qa)
+writeQFile qa = putStrLn "Saving QA file..."
+                >> writeFile "questions.qa" (show qa)
+                
 
 -- | Default data
 defaultData :: QA
-defaultData = Q "Is this person from Europe?" 
-    (Q "Is this person a scientist?" 
+defaultData = Q "Is this person from Europe? " 
+    (Q "Is this person a scientist? " 
         (P "Marie Skłodowska-Curie") 
         (P "Queen Elisabeth II")) 
-    (Q "Is this person an actor?" 
+    (Q "Is this person an actor? " 
         (P "Marilyn Monroe") 
         (P "Hillary Clinton"))
 
@@ -66,23 +68,27 @@ readcontent (Right str) = getQA $ readMaybe str
 askQ :: QA -> IO (String, String)
 askQ (Q q y n) = 
     do
-        putStrLn q
+        putStr q
+        hFlush stdout
         answ <- getLine 
         checkAns answ
         where checkAns a 
                 | isYes a = askQ y
                 | isNo  a = askQ n
                 | otherwise      = do
-                            putStrLn "I recognise only 'yes' or 'no' answer"
+                            putStr "Please answer yes or no!"
+                            hFlush stdout
                             askQ (Q q y n)
 askQ (P p)     = 
     do
-        putStrLn $ "My guess: Is it " ++ p ++ "?"
+        putStr $ "My guess: Is it " ++ p ++ "? "
+        hFlush stdout
         answ <- getLine
         checkAns answ
         where checkAns a 
                 | (not . isYes) a && (not . isNo) a = 
-                    putStrLn "I recognise only 'yes' or 'no' answer" 
+                    putStr "I recognise only 'yes' or 'no' answer"
+                    >>hFlush stdout 
                     >> askQ (P p)
                 | otherwise = return (p, a)
 
@@ -95,11 +101,12 @@ playGame questions = do
     again updated rep
     where checkAns (lastGuess, answer) questions 
                 | isYes answer = do
-                   putStrLn "I won" 
+                   putStrLn "Hurray! I won!" 
                    return questions
                 | isNo answer = do
-                   putStrLn ("OK - you won this time." 
-                     ++ "\n Just curious: Who was your famous person?")
+                   putStr ("OK - you won this time." 
+                     ++ "\n Just curious: Who was your famous person? ")
+                   hFlush stdout
                    newPerson <- getLine
                    putStrLn ("Give me a question for which the answer for "
                      ++ newPerson ++  " is 'yes' and the answer for "
@@ -113,6 +120,7 @@ playGame questions = do
 playAgain :: IO Bool
 playAgain = do
     putStr "Play again? "
+    hFlush stdout
     ans <- getLine
     return (isYes ans)
 
@@ -131,3 +139,4 @@ main = do
     questions <- getData
     updatedQuestions <- playGame questions
     writeQFile updatedQuestions
+    putStrLn "Bye!"
