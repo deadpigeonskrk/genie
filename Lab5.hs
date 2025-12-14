@@ -2,6 +2,8 @@ module Lab5
 where 
 import System.IO
 import System.IO.Error(tryIOError)
+import Text.Read
+import Data.Maybe
 
 
 -- | Data type
@@ -66,19 +68,38 @@ main = do
     questions <- getData
     result <- askQ questions
     updatedquestions <- checkAns result questions
-    writeQFile questions
+    writeQFile updatedquestions
     where checkAns (lastGuess, answer) questions 
                     | yesAnswer == answer = 
                        putStrLn "I won" 
-                       >> return playAgain
-                    | noAnswer  == answer =
-                       putStrLn "OK - you won this time." 
-                       >> return (addInfo questions lastGuess)
+                       >> return questions
+                    | noAnswer  == answer = do
+                       putStrLn "OK - you won this time.\n Just curious: Who was your famous person?"
+                       newPerson <- getLine
+                       putStrLn ("Give me a question for which the answer for " 
+                         ++ newPerson ++  " is 'yes' and the answer for " 
+                         ++ lastGuess ++ " is 'no'.")
+                       newQuest <- getLine
+                       return (addInfo questions lastGuess newPerson newQuest)
 
 playAgain = defaultData
 
-addInfo :: QA -> Person -> QA
-addInfo = undefined
+addInfo :: QA -> Person -> Person -> Question -> QA
+addInfo (Q q y n) wrongPer newPer newQ = Q q (addInfo y wrongPer newPer newQ) (addInfo n wrongPer newPer newQ)
+addInfo (P p)     wrongPer newPer newQ
+                                      | p == wrongPer = Q newQ (P newPer) (P wrongPer)
+                                      | otherwise     = P p
+
 
 getData :: IO QA
-getData = return defaultData
+getData = do
+            content <- tryIOError (readFile "questions.qa") 
+            let qa = readcontent content
+            return qa
+
+readcontent :: Either IOError String -> QA
+readcontent (Left _)    = defaultData
+readcontent (Right str) = let qa = readMaybe str in
+                        getQA qa
+                        where getQA (Just qa) = qa
+                              getQA Nothing = defaultData
